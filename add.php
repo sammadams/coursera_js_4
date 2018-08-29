@@ -29,6 +29,13 @@ if ( isset($_POST['first_name']) && isset($_POST['last_name']) && isset($_POST['
     return;
   }
 
+  $msg = validateEdu();
+  if ( is_string($msg) ) {
+    $_SESSION['error'] = $msg;
+    header("Location: add.php");
+    return;
+  }
+
     // DONE: changed for JS_assignment_1 specs
     $sql = 'INSERT INTO profile (user_id, first_name, last_name, email, headline, summary) VALUES ( :uid, :fn, :ln, :em, :he, :su)';
     $stmt = $pdo->prepare($sql);
@@ -42,24 +49,9 @@ if ( isset($_POST['first_name']) && isset($_POST['last_name']) && isset($_POST['
     ); 
 
     $profile_id = $pdo->lastInsertId();
-    $sqlPos = 'INSERT INTO position (profile_id, rank, year, description) VALUES (:pid, :rank, :year, :desc)';
 
-    $rank = 1;
-    for($i=1; $i<=9; $i++) {
-      if ( !isset($_POST['year'.$i]) ) continue;
-      if ( !isset($_POST['desc'.$i]) ) continue;
-      $year = $_POST['year'.$i];
-      $desc = $_POST['desc'.$i];
-
-      $stmtPos = $pdo->prepare($sqlPos);
-      $stmtPos->execute(array(
-        ':pid' => $profile_id,
-        ':rank' => $rank,
-        ':year' => $year,
-        ':desc' => $desc)
-      );
-    $rank++;
-    };
+    insertPositions($pdo, $profile_id);
+    insertEducations($pdo, $profile_id);
 
     $_SESSION['success'] = 'Record Added';
     header( 'Location: index.php' ) ;
@@ -70,9 +62,24 @@ if ( isset($_POST['first_name']) && isset($_POST['last_name']) && isset($_POST['
 <html>
   <head>
     <title>Samuel Adams</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
-    <script src="https://code.jquery.com/jquery-3.2.1.js" integrity="sha256-DZAnKJ/6XZ9si04Hgrsxu/8s717jcIzLy3oi35EouyE=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" 
+    href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" 
+    integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" 
+    crossorigin="anonymous">
+    <link rel="stylesheet" 
+    href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" 
+    integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" 
+    crossorigin="anonymous">
+    <link rel="stylesheet" 
+    href="https://code.jquery.com/ui/1.12.1/themes/ui-lightness/jquery-ui.css">
+    <script
+    src="https://code.jquery.com/jquery-3.2.1.js"
+    integrity="sha256-DZAnKJ/6XZ9si04Hgrsxu/8s717jcIzLy3oi35EouyE="
+    crossorigin="anonymous"></script>
+    <script
+    src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"
+    integrity="sha256-T0Vest3yCU7pafRw9r+settMBX6JkKN06dqBnpQ8d30="
+    crossorigin="anonymous"></script>
   </head>
 <body>
 <p>Add A New Resume</p>
@@ -92,6 +99,10 @@ if ( isset($_POST['first_name']) && isset($_POST['last_name']) && isset($_POST['
     <textarea name="summary" rows="8" cols="80"></textarea>
 </p>
 <p>
+  Education: <input type="submit" id="addEdu" value="+">
+  <div id="edu_fields"></div>
+</p>
+<p>
   Position: <input type="submit" id="addPos" value="+">
   <div id="position_fields"></div>
 </p>
@@ -99,7 +110,13 @@ if ( isset($_POST['first_name']) && isset($_POST['last_name']) && isset($_POST['
 <input type="submit" name="cancel" value="Cancel"></p>
 </form>
 <script>
+function htmlentities(string){
+  return $('<div/>').text(string).html();
+};
+
   countPos = 0;
+  countEdu = 0;
+
   $(document).ready(function(){
       window.console && console.log('Document ready called');
       $('#addPos').click(function(event){
@@ -118,8 +135,32 @@ if ( isset($_POST['first_name']) && isset($_POST['last_name']) && isset($_POST['
               <textarea name="desc'+countPos+'" rows="8" cols="80"></textarea>\
               </div>');
       });
+
+      $('#addEdu').click(function(event){
+          event.preventDefault();
+          if ( countEdu >= 9 ) {
+              alert("Maximum of nine education entries exceeded");
+              return;
+          };
+          countEdu++;
+          window.console && console.log("Adding education "+countEdu);
+
+          var source = $("#edu-template").html();
+          $('#edu_fields').append(source.replace(/@COUNT@/g,countEdu));
+
+          $('.school').autocomplete({ source: "school.php" });
+
+      });
   });
 
+</script>
+<script id="edu-template" type="text">
+  <div id="edu@COUNT@">
+    <p>Year: <input type="text" name="edu_year@COUNT@" value="" />
+      <input type="button" value="-" onclick="$('#edu@COUNT@').remove();return false;"></p><br>
+    <p>School: <input type="text" size="80" name="edu_school@COUNT@" class="school" value="" />
+    </p>
+  </div>
 </script>
 </body>
 </html>

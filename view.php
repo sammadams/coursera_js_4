@@ -2,6 +2,7 @@
 // FINISHED - I think...
 session_start();
 require_once("pdo.php");
+require_once("util.php");
 
 // process SQL statement
 $sql = "SELECT * FROM profile WHERE profile_id = :profile_id";
@@ -14,26 +15,6 @@ if ( $row === false ) {
     return;
 };
 
-/*
-$rank = 1;
-    for($i=1; $i<=9; $i++) {
-      if ( !isset($_POST['year'.$i]) ) continue;
-      if ( !isset($_POST['descr'.$i]) ) continue;
-      $year = $_POST['year'.$i];
-      $desc = $_POST['desc'.$i];
-
-      $sql2 = 'INSERT INTO Position (profile_id, rank, year, description) VALUES (:pid, :rank, :year, :desc)';
-      $stmt = $pdo->prepare($sql2);
-      $stmt->execute(array(
-        ':pid' => $profile_id,
-        ':rank' => $rank,
-        ':year' => $year,
-        ':desc' => $desc)
-      );
-    $rank++;
-    };
- */
-
 // set page variables
 $fn = htmlentities($row['first_name']);
 $ln = htmlentities($row['last_name']);
@@ -41,8 +22,12 @@ $e = htmlentities($row['email']);
 $h = htmlentities($row['headline']);
 $s = htmlentities($row['summary']);
 
-// process second SQL to grab positions from DB in ul
+// process second SQL to grab positions and EDU from DB in ul
+$positions = loadPos($pdo, $_REQUEST['profile_id']);
+$schools = loadEdu($pdo, $_REQUEST['profile_id']);
 
+$countEdu = 0;
+$countPos = 0;
 ?>
 
 <html>
@@ -65,28 +50,29 @@ $s = htmlentities($row['summary']);
 				<?php echo($h) ?> </p>
 			<p>Summary:<br/>
 				<?php echo($s) ?> </p>
-			<p>Position:</p>
-			<ul>
-				<?php
-				$sqlPos = "SELECT * FROM Position WHERE profile_id = :profile_id AND rank = :rank";
-				$stmt2 = $pdo->prepare($sqlPos);
-				// run loop over select
-				for($i=1;$i<=9;$i++) {
-					$stmt2->execute(array(
-						":profile_id" => $_GET['profile_id'],
-						":rank" => $i
-					));
-					$row[$i] = $stmt2->fetch(PDO::FETCH_ASSOC);
-					$year[$i] = htmlentities($row[$i]['year']);
-					$desc[$i] = htmlentities($row[$i]['description']);
-					if ( !empty($year[$i]) && !empty($desc[$i]) ){
-						echo("<li>".$year[$i].": ".$desc[$i]."</li>");	
+			<?php
+				echo('<p>Education:</p>'."\n");
+				echo('<ul>'."\n");
+				if ( count($schools) > 0 ) {
+					foreach( $schools as $school ) {
+						$countEdu++;
+						echo('<li>'.htmlentities($school['year']).' : '.htmlentities($school['name']).'</li>');
 					};
 				};
+				echo("</ul>");
+			?>
 
-				?>
-			</ul>
-			<?php // need to add positions here ?>
+			<?php
+				echo('<p>Positions:</p>'."\n");
+				echo('<ul>'."\n");
+				if ( count($positions) > 0 ) {
+					foreach( $positions as $position ) {
+						$countPos++;
+						echo('<li>'.htmlentities($position['year']).' : '.htmlentities($position['description']).'</li>');
+					};
+				};
+				echo("</ul>");
+			?>
 			<p><a href="index.php">Done</a></p>
 		</div>
 	</body>
